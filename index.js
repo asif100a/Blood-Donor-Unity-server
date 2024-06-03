@@ -29,6 +29,12 @@ async function run() {
         // Database collections
         const donationRequestCollection = client.db('bloodDonationDB').collection('donationRequests');
 
+        // Read the danation request data from the db
+        app.get('/donation-requests', async(req, res) => {
+            const result = await donationRequestCollection.find().toArray();
+            res.send(result);
+        });
+
         // Create the donation request data to the db
         app.post('/donation-requests', async(req, res) => {
             const data = req.body;
