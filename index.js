@@ -29,14 +29,20 @@ async function run() {
         // Database collections
         const donationRequestCollection = client.db('bloodDonationDB').collection('donationRequests');
 
-        // Read the danation request data from the db
-        app.get('/donation-requests', async(req, res) => {
+        // Read the donation requests data from the db
+        app.get('/donation-requests', async (req, res) => {
             const result = await donationRequestCollection.find().toArray();
             res.send(result);
         });
 
+        // // Read the recent donation requests data from the db
+        app.get('/recent-requests', async(req, res) => {
+            const recentData = await donationRequestCollection.find().sort({selectedDate: -1}).limit(3).toArray();
+            res.send(recentData);
+        });
+
         // Create the donation request data to the db
-        app.post('/donation-requests', async(req, res) => {
+        app.post('/donation-requests', async (req, res) => {
             const data = req.body;
             const result = await donationRequestCollection.insertOne(data);
             res.send(result);
