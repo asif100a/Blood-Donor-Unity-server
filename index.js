@@ -27,8 +27,19 @@ async function run() {
         // await client.connect();
 
         // Database collections
+        const userCollection = client.db('bloodDonationDB').collection('users');
         const donationRequestCollection = client.db('bloodDonationDB').collection('donationRequests');
 
+        // -------------------[Users info]----------------------
+        // Create user data to the db
+        app.post('/users', async(req, res) => {
+            const userInfo = req.body;
+            console.log(userInfo)
+            const result = await userCollection.insertOne(userInfo);
+            res.send(result);
+        });
+
+        // -------------------[Donation request data]------------------------
         // Read the donation requests data from the db
         app.get('/donation-requests', async (req, res) => {
             const result = await donationRequestCollection.find().toArray();
