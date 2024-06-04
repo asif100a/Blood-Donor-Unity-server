@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -32,31 +32,55 @@ async function run() {
 
         // -------------------[Users info]----------------------
         // Create user data to the db
-        app.post('/users', async(req, res) => {
+        app.post('/users', async (req, res) => {
             const userInfo = req.body;
-            console.log(userInfo)
+            // console.log(userInfo)
             const result = await userCollection.insertOne(userInfo);
             res.send(result);
         });
 
         // -------------------[Donation request data]------------------------
         // Read the donation requests data from the db
-        app.get('/donation-requests', async (req, res) => {
-            const result = await donationRequestCollection.find().toArray();
-            res.send(result);
+        app.get('/donation-requests/:email', async (req, res) => {
+            const email = req.params.email;
+            console.log('Email:', email)
+            if (email) {
+                const filter = { requester_email: email }
+                const result = await donationRequestCollection.find(filter).toArray();
+                res.send(result);
+            }
         });
 
-        // // Read the recent donation requests data from the db
-        app.get('/recent-requests', async(req, res) => {
-            const recentData = await donationRequestCollection.find().sort({selectedDate: -1}).limit(3).toArray();
+        // Read the recent donation requests data from the db
+        app.get('/recent-requests/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { requester_email: email }
+            // console.log('User email filter', filter);
+            const recentData = await donationRequestCollection.find(filter).sort({ selectedDate: -1 }).limit(3).toArray();
             res.send(recentData);
         });
+
+        // Read a single data to update data
+        app.get('/donation-requests-field/:id', async(req, res) => {
+            const id = req.params.id;
+            console.log('update id:', id);
+            const query = {_id: new ObjectId(id)};
+            const result = await donationRequestCollection.findOne(query);
+            res.send(result);
+        })
 
         // Create the donation request data to the db
         app.post('/donation-requests', async (req, res) => {
             const data = req.body;
             const result = await donationRequestCollection.insertOne(data);
             res.send(result);
+        });
+
+        // Update the donation request to the db
+        app.patch('/donation-requests/:id', async(req, res) => {
+            const id = req.params.id;
+            const data = req.body;
+            // console.log({id, data})
         });
 
         // Send a ping to confirm a successful connection
