@@ -43,7 +43,7 @@ async function run() {
         // Read the donation requests data from the db
         app.get('/donation-requests/:email', async (req, res) => {
             const email = req.params.email;
-            console.log('Email:', email)
+            // console.log('Email:', email)
             if (email) {
                 const filter = { requester_email: email }
                 const result = await donationRequestCollection.find(filter).toArray();
@@ -63,7 +63,7 @@ async function run() {
         // Read a single data to update data
         app.get('/donation-requests-field/:id', async(req, res) => {
             const id = req.params.id;
-            console.log('update id:', id);
+            // console.log('update id:', id);
             const query = {_id: new ObjectId(id)};
             const result = await donationRequestCollection.findOne(query);
             res.send(result);
@@ -80,7 +80,15 @@ async function run() {
         app.patch('/donation-requests/:id', async(req, res) => {
             const id = req.params.id;
             const data = req.body;
-            // console.log({id, data})
+            console.log({id, data});
+            const filter = {_id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    ...data
+                }
+            };
+            const result = await donationRequestCollection.updateOne(filter, updatedDoc);
+            res.send(result);
         });
 
         // Send a ping to confirm a successful connection
