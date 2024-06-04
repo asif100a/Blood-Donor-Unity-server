@@ -39,6 +39,21 @@ async function run() {
             res.send(result);
         });
 
+        // Read users data from the db
+        app.get('/users', async(req, res) => {
+            const result = await userCollection.find().toArray();
+            res.send(result);
+        });
+
+        // Read specific user by email
+        app.get('/users/:email', async(req, res) => {
+            const email = req.params.email;
+            console.log('asif')
+            const filter = {email};
+            const result = await userCollection.findOne(filter);
+            res.send(result);
+        });
+
         // -------------------[Donation request data]------------------------
         // Read the donation requests data from the db
         app.get('/donation-requests/:email', async (req, res) => {
