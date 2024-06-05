@@ -29,6 +29,7 @@ async function run() {
         // Database collections
         const userCollection = client.db('bloodDonationDB').collection('users');
         const donationRequestCollection = client.db('bloodDonationDB').collection('donationRequests');
+        const blogCollection = client.db('bloodDonationDB').collection('blogs');
 
         // -------------------[Users info]----------------------
         // Create user data to the db
@@ -48,7 +49,6 @@ async function run() {
         // Read specific user by email
         app.get('/users/:email', async(req, res) => {
             const email = req.params.email;
-            // console.log('asif')
             const filter = {email};
             const result = await userCollection.findOne(filter);
             res.send(result);
@@ -81,10 +81,15 @@ async function run() {
         });
 
         // -------------------[Donation request data]------------------------
-        // Read the donation requests data from the db
+        // Read all the donation requests data from the db
+        app.get('/donation-requests', async(req, res) => {
+            const result = await donationRequestCollection.find().toArray();
+            res.send(result);
+        });
+        
+        // Read the donation requests data based on the email from the db
         app.get('/donation-requests/:email', async (req, res) => {
             const email = req.params.email;
-            // console.log('Email:', email)
             if (email) {
                 const filter = { requester_email: email }
                 const result = await donationRequestCollection.find(filter).toArray();
@@ -138,6 +143,21 @@ async function run() {
             const filter = {_id: new ObjectId(id)};
             const result = await donationRequestCollection.deleteOne(filter);
             res.send(result);
+        });
+
+        // ---------------------[Blogs Data]---------------------
+        // Read the blogs from the db
+        app.get('/blogs', async(req, res) => {
+            const result = await blogCollection.find().toArray();
+            res.send(result);
+        });
+        
+        // Create a blog to the db
+        app.post('/blogs', async(req, res) => {
+            const blog = req.body;
+            console.log(blog);
+            const result = await blogCollection.insertOne(blog);
+            res.send(result)
         });
 
         // Send a ping to confirm a successful connection
