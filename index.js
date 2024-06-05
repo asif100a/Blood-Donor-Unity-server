@@ -48,9 +48,35 @@ async function run() {
         // Read specific user by email
         app.get('/users/:email', async(req, res) => {
             const email = req.params.email;
-            console.log('asif')
+            // console.log('asif')
             const filter = {email};
             const result = await userCollection.findOne(filter);
+            res.send(result);
+        });
+
+        // Update user's status
+        app.patch('/users-update-status/:email', async(req, res) => {
+            const email = req.params.email;
+            const status = req.body;
+            const filter = {email};
+            console.log(filter);
+            const updatedDoc = {
+                $set: {...status}
+            };
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        });
+
+        // Update user's role
+        app.patch('/users-update-role/:email', async(req, res) => {
+            const email = req.params.email;
+            const role = req.body;
+            const filter = {email};
+            console.log(filter);
+            const updatedDoc = {
+                $set: {...role}
+            };
+            const result = await userCollection.updateOne(filter, updatedDoc);
             res.send(result);
         });
 
