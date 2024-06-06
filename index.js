@@ -126,12 +126,23 @@ async function run() {
         app.patch('/donation-requests/:id', async(req, res) => {
             const id = req.params.id;
             const data = req.body;
-            console.log({id, data});
             const filter = {_id: new ObjectId(id)};
             const updatedDoc = {
                 $set: {
                     ...data
                 }
+            };
+            const result = await donationRequestCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        });
+
+        // Update a single field of donation request
+        app.patch('/donation-requests-status/:id', async(req, res) => {
+            const id = req.params.id;
+            const data = req.body;
+            const filter = {_id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {...data}
             };
             const result = await donationRequestCollection.updateOne(filter, updatedDoc);
             res.send(result);
@@ -158,6 +169,27 @@ async function run() {
             console.log(blog);
             const result = await blogCollection.insertOne(blog);
             res.send(result)
+        });
+
+        // Update blog to publish blog
+        app.patch('/blogs/:id', async(req, res) => {
+            const id = req.params.id;
+            const data = req.body;
+            const filter = {_id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {...data}
+            };
+            const result = await blogCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        });
+
+        // Delete a blog from the db
+        app.delete('/blogs/:id', async(req, res) => {
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)};
+            console.log('deleted id:', id);
+            const result = await blogCollection.deleteOne(filter);
+            res.send(result);
         });
 
         // Send a ping to confirm a successful connection
