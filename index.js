@@ -9,6 +9,7 @@ const port = process.env.PORT || 3000;
 app.use(cors({
     origin: [
         'http://localhost:5173',
+        'https://blood-donator-unity.web.app'
     ]
 }));
 app.use(express.json());
@@ -94,10 +95,20 @@ async function run() {
         // Read the donation requests data based on the email from the db
         app.get('/donation-requests/:email', async (req, res) => {
             const email = req.params.email;
+            const {status} = req.query;
+            console.log(status)
             if (email) {
                 const filter = { requester_email: email }
                 const result = await donationRequestCollection.find(filter).toArray();
-                res.send(result);
+                // If status then filter data based on the status
+                if(status) {
+                    const filteredData = result.filter(data => data.donation_status === status);
+                    console.log(filteredData)
+                    res.send(filteredData);
+
+                } else{
+                    res.send(result);
+                }
             }
         });
 
@@ -197,8 +208,8 @@ async function run() {
         });
 
         // Send a ping to confirm a successful connection
-        // await client.db("admin").command({ ping: 1 });
-        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
