@@ -133,6 +133,21 @@ async function run() {
             res.send(recentData);
         });
 
+        // Read the pending donation requests data
+        app.get('/pending-requests', async(req, res) => {
+            const query = {donation_status: 'pending'};
+            const result = await donationRequestCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        // Read a single pending donation request data
+        app.get('/pending-requests/:id', async(req, res) => {
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)};
+            const result = await donationRequestCollection.findOne(filter);
+            res.send(result)
+        });
+
         // Read a single data to update data
         app.get('/donation-requests-field/:id', async (req, res) => {
             const id = req.params.id;
@@ -140,7 +155,7 @@ async function run() {
             const query = { _id: new ObjectId(id) };
             const result = await donationRequestCollection.findOne(query);
             res.send(result);
-        })
+        });
 
         // Create the donation request data to the db
         app.post('/donation-requests', async (req, res) => {
@@ -236,6 +251,7 @@ async function run() {
 
             res.send({
                 total_user,
+                
                 total_blood_donation_request
             })
         });
