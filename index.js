@@ -226,6 +226,21 @@ async function run() {
             res.send(result);
         });
 
+        // Read the published blogs
+        app.get('/published-blogs', async(req, res) => {
+            const query = {status: 'published'};
+            const result = await blogCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        // Read a single published blog data
+        app.get('/published-blogs/:id', async(req, res) => {
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)};
+            const result = await blogCollection.findOne(filter);
+            res.send(result);
+        });
+
         // Create a blog to the db
         app.post('/blogs', async (req, res) => {
             const blog = req.body;
