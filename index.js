@@ -285,6 +285,20 @@ async function run() {
             })
         });
 
+        // ------------------[Data For Search Page]-------------------
+        app.get('/search-value', async(req, res) => {
+            const {blood_group, district, upazila} = req.query;
+            console.log(blood_group, district, upazila);
+
+            let query = {};
+            if(blood_group) query.blood_group = blood_group;
+            if(district) query.district = district;
+            if(upazila) query.upazila = upazila;
+            
+            const result = await donationRequestCollection.find(query).toArray();
+            res.send(result);
+        });
+
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
