@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -10,7 +11,9 @@ app.use(cors({
     origin: [
         'http://localhost:5173',
         'https://blood-donator-unity.web.app'
-    ]
+    ],
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
 app.use(express.json());
 
@@ -36,9 +39,45 @@ async function run() {
         const donationRequestCollection = client.db('bloodDonationDB').collection('donationRequests');
         const blogCollection = client.db('bloodDonationDB').collection('blogs');
 
+        // --------------------[JWT api]-------------------------
+        app.post('/jwt', (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.TOKEN_SECRET_KEY, {expiresIn: '7d'});
+            res.send(token);
+        });
+
+        // ----------------[Authorization middleware]----------------
+        // Verify the token
+        const verifyToken = (req, res, next) => {
+            if (!req.headers.authorization) {
+                return res.status(401).send({ message: 'unathorized access' });
+            }
+            const token = req.headers.authorization.split(' ')[1];
+            // console.log('token', token)
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+                if (error) {
+                    return res.status(401).send({ message: 'unathorized access' });
+                }
+                req.decoded = decoded;
+                next();
+            });
+        };
+
+        // Verify the Admin
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            const isAdmin = user?.role === 'admin';
+            if (!isAdmin) {
+                res.status(403).send({ message: 'forbidden access' });
+            }
+            next();
+        };
+
         // -------------------[Users info]----------------------
         // Read users data from the db
-        app.get('/users', async (req, res) => {
+        app.get('/users', verifyToken, async (req, res) => {
             const { status } = req.query;
             console.log(status)
             let filter = {};
@@ -50,7 +89,7 @@ async function run() {
         });
 
         // Create user data to the db
-        app.post('/users', async (req, res) => {
+        app.post('/users', verifyToken, verifyAdmin, async (req, res) => {
             const userInfo = req.body;
             // console.log(userInfo)
             const result = await userCollection.insertOne(userInfo);
@@ -58,15 +97,28 @@ async function run() {
         });
 
         // Read specific user by email
-        app.get('/users/:email', async (req, res) => {
+        app.get('/users/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
             const filter = { email };
             const result = await userCollection.findOne(filter);
             res.send(result);
         });
 
+        // Update user's info
+        app.put('/users/:id', verifyToken, async(req, res) => {
+            const id = req.params.id;
+            const info = req.body;
+            console.log({id, info})
+            const filter = {_id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {...info}
+            };
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        });
+
         // Update user's status
-        app.patch('/users-update-status/:email', async (req, res) => {
+        app.patch('/users-update-status/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
             const status = req.body;
             const filter = { email };
@@ -79,7 +131,7 @@ async function run() {
         });
 
         // Update user's role
-        app.patch('/users-update-role/:email', async (req, res) => {
+        app.patch('/users-update-role/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
             const role = req.body;
             const filter = { email };
@@ -93,7 +145,7 @@ async function run() {
 
         // -------------------[Donation request data]------------------------
         // Read all the donation requests data from the db
-        app.get('/donation-requests', async (req, res) => {
+        app.get('/donation-requests', verifyToken, async (req, res) => {
             const { status } = req.query;
             console.log(status)
             let filter = {};
@@ -105,7 +157,7 @@ async function run() {
         });
 
         // Read the donation requests data based on the email from the db
-        app.get('/donation-requests/:email', async (req, res) => {
+        app.get('/donation-requests/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
             const { status } = req.query;
             console.log(status)
@@ -125,7 +177,7 @@ async function run() {
         });
 
         // Read the recent donation requests data from the db
-        app.get('/recent-requests/:email', async (req, res) => {
+        app.get('/recent-requests/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
             const filter = { requester_email: email }
             // console.log('User email filter', filter);
@@ -214,7 +266,7 @@ async function run() {
 
         // ---------------------[Blogs Data]---------------------
         // Read the blogs from the db
-        app.get('/blogs', async (req, res) => {
+        app.get('/blogs', verifyToken, async (req, res) => {
             const { status } = req.query;
             console.log(status);
             let filter = {};
@@ -242,7 +294,7 @@ async function run() {
         });
 
         // Create a blog to the db
-        app.post('/blogs', async (req, res) => {
+        app.post('/blogs', verifyToken, verifyAdmin, async (req, res) => {
             const blog = req.body;
             // console.log(blog);
             const result = await blogCollection.insertOne(blog);
