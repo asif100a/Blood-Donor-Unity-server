@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const stirpe = require('stripe')(process.env.SECRET_KEY);
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -38,46 +39,47 @@ async function run() {
         const userCollection = client.db('bloodDonationDB').collection('users');
         const donationRequestCollection = client.db('bloodDonationDB').collection('donationRequests');
         const blogCollection = client.db('bloodDonationDB').collection('blogs');
+        const fundCollection = client.db('bloodDonationDB').collection('funds');
 
         // --------------------[JWT api]-------------------------
         app.post('/jwt', (req, res) => {
             const user = req.body;
-            const token = jwt.sign(user, process.env.TOKEN_SECRET_KEY, {expiresIn: '7d'});
+            const token = jwt.sign(user, process.env.TOKEN_SECRET_KEY, { expiresIn: '7d' });
             res.send(token);
         });
 
         // ----------------[Authorization middleware]----------------
-        // Verify the token
-        const verifyToken = (req, res, next) => {
-            if (!req.headers.authorization) {
-                return res.status(401).send({ message: 'unathorized access' });
-            }
-            const token = req.headers.authorization.split(' ')[1];
-            // console.log('token', token)
-            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
-                if (error) {
-                    return res.status(401).send({ message: 'unathorized access' });
-                }
-                req.decoded = decoded;
-                next();
-            });
-        };
+        // // Verify the token
+        // const verifyToken = (req, res, next) => {
+        //     if (!req.headers.authorization) {
+        //         return res.status(401).send({ message: 'unathorized access' });
+        //     }
+        //     const token = req.headers.authorization.split(' ')[1];
+        //     // console.log('token', token)
+        //     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+        //         if (error) {
+        //             return res.status(401).send({ message: 'unathorized access' });
+        //         }
+        //         req.decoded = decoded;
+        //         next();
+        //     });
+        // };
 
         // Verify the Admin
-        const verifyAdmin = async (req, res, next) => {
-            const email = req.decoded.email;
-            const query = { email: email };
-            const user = await userCollection.findOne(query);
-            const isAdmin = user?.role === 'admin';
-            if (!isAdmin) {
-                res.status(403).send({ message: 'forbidden access' });
-            }
-            next();
-        };
+        // const verifyAdmin = async (req, res, next) => {
+        //     const email = req.decoded.email;
+        //     const query = { email: email };
+        //     const user = await userCollection.findOne(query);
+        //     const isAdmin = user?.role === 'admin';
+        //     if (!isAdmin) {
+        //         res.status(403).send({ message: 'forbidden access' });
+        //     }
+        //     next();
+        // };
 
         // -------------------[Users info]----------------------
         // Read users data from the db
-        app.get('/users', verifyToken, async (req, res) => {
+        app.get('/users', async (req, res) => {
             const { status } = req.query;
             console.log(status)
             let filter = {};
@@ -89,7 +91,7 @@ async function run() {
         });
 
         // Create user data to the db
-        app.post('/users', verifyToken, verifyAdmin, async (req, res) => {
+        app.post('/users', async (req, res) => {
             const userInfo = req.body;
             // console.log(userInfo)
             const result = await userCollection.insertOne(userInfo);
@@ -97,7 +99,7 @@ async function run() {
         });
 
         // Read specific user by email
-        app.get('/users/:email', verifyToken, async (req, res) => {
+        app.get('/users/:email', async (req, res) => {
             const email = req.params.email;
             const filter = { email };
             const result = await userCollection.findOne(filter);
@@ -105,20 +107,20 @@ async function run() {
         });
 
         // Update user's info
-        app.put('/users/:id', verifyToken, async(req, res) => {
+        app.put('/users/:id', async (req, res) => {
             const id = req.params.id;
             const info = req.body;
-            console.log({id, info})
-            const filter = {_id: new ObjectId(id)};
+            console.log({ id, info })
+            const filter = { _id: new ObjectId(id) };
             const updatedDoc = {
-                $set: {...info}
+                $set: { ...info }
             };
             const result = await userCollection.updateOne(filter, updatedDoc);
             res.send(result);
         });
 
         // Update user's status
-        app.patch('/users-update-status/:email', verifyToken, async (req, res) => {
+        app.patch('/users-update-status/:email', async (req, res) => {
             const email = req.params.email;
             const status = req.body;
             const filter = { email };
@@ -131,7 +133,7 @@ async function run() {
         });
 
         // Update user's role
-        app.patch('/users-update-role/:email', verifyToken, async (req, res) => {
+        app.patch('/users-update-role/:email', async (req, res) => {
             const email = req.params.email;
             const role = req.body;
             const filter = { email };
@@ -145,7 +147,7 @@ async function run() {
 
         // -------------------[Donation request data]------------------------
         // Read all the donation requests data from the db
-        app.get('/donation-requests', verifyToken, async (req, res) => {
+        app.get('/donation-requests', async (req, res) => {
             const { status } = req.query;
             console.log(status)
             let filter = {};
@@ -157,7 +159,7 @@ async function run() {
         });
 
         // Read the donation requests data based on the email from the db
-        app.get('/donation-requests/:email', verifyToken, async (req, res) => {
+        app.get('/donation-requests/:email', async (req, res) => {
             const email = req.params.email;
             const { status } = req.query;
             console.log(status)
@@ -177,7 +179,7 @@ async function run() {
         });
 
         // Read the recent donation requests data from the db
-        app.get('/recent-requests/:email', verifyToken, async (req, res) => {
+        app.get('/recent-requests/:email', async (req, res) => {
             const email = req.params.email;
             const filter = { requester_email: email }
             // console.log('User email filter', filter);
@@ -266,7 +268,7 @@ async function run() {
 
         // ---------------------[Blogs Data]---------------------
         // Read the blogs from the db
-        app.get('/blogs', verifyToken, async (req, res) => {
+        app.get('/blogs', async (req, res) => {
             const { status } = req.query;
             console.log(status);
             let filter = {};
@@ -278,30 +280,39 @@ async function run() {
             res.send(result);
         });
 
+        // Read the specific blog from the db
+        app.get('/blogs/:id', async(req, res) => {
+            const id = req.params.id;
+            // console.log('Edit id:', id);
+            const query = { _id: new ObjectId(id) };
+            const result = await blogCollection.findOne(query);
+            res.send(result);
+        });
+
         // Read the published blogs
-        app.get('/published-blogs', async(req, res) => {
-            const query = {status: 'published'};
+        app.get('/published-blogs', async (req, res) => {
+            const query = { status: 'published' };
             const result = await blogCollection.find(query).toArray();
             res.send(result);
         });
 
         // Read a single published blog data
-        app.get('/published-blogs/:id', async(req, res) => {
+        app.get('/published-blogs/:id', async (req, res) => {
             const id = req.params.id;
-            const filter = {_id: new ObjectId(id)};
+            const filter = { _id: new ObjectId(id) };
             const result = await blogCollection.findOne(filter);
             res.send(result);
         });
 
         // Create a blog to the db
-        app.post('/blogs', verifyToken, verifyAdmin, async (req, res) => {
+        app.post('/blogs', async (req, res) => {
             const blog = req.body;
             // console.log(blog);
             const result = await blogCollection.insertOne(blog);
             res.send(result)
         });
 
-        // Update blog to publish blog
+        // Publish blog
         app.patch('/blogs/:id', async (req, res) => {
             const id = req.params.id;
             const data = req.body;
@@ -314,6 +325,21 @@ async function run() {
             res.send(result);
         });
 
+        // Update blog
+        app.put('/blogs/edit-blog/:id', async(req, res) => {
+            const id = req.params.id;
+            console.log('edit blog id:', id);
+            const data = req.body;
+            console.log(data);
+
+            const filter = { _id: new ObjectId(id) };
+            const updated_doc ={
+                $set: { ...data }
+            };
+            const result = await blogCollection.updateOne(filter, updated_doc);
+            res.send(result);
+        });
+
         // Delete a blog from the db
         app.delete('/blogs/:id', async (req, res) => {
             const id = req.params.id;
@@ -323,37 +349,85 @@ async function run() {
             res.send(result);
         });
 
+        // ------------------[Data For Search Page]-------------------
+        app.get('/search-value', async (req, res) => {
+            const { blood_group, district, upazila } = req.query;
+            console.log(blood_group, district, upazila);
+
+            let query = {};
+            if (blood_group) query.blood_group = blood_group;
+            if (district) query.district = district;
+            if (upazila) query.upazila = upazila;
+
+            const result = await donationRequestCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        // ------------------[Fund Donation]------------------
+        app.post('/create-fund-intent', async (req, res) => {
+            const { value } = req.body;
+            console.log('amunt', value);
+            if (value === '') {
+                return console.log('empty:', value)
+            }
+            const amount = parseInt(value * 100);
+
+            const paymentIntent = await stirpe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        });
+
+        // ------------------[Create the fund data collection]--------------------
+        app.post('/donation-fund', async (req, res) => {
+            const { fund } = req.body;
+            console.log(fund);
+            const result = await fundCollection.insertOne(fund);
+            res.send(result);
+        });
+
+        // Read the donation data 
+        app.get('/donation-fund', async (req, res) => {
+            const result = await fundCollection.find().toArray();
+            res.send(result);
+        });
+
         // ----------------[Admin Statistics]-----------------
         app.get('/admin-statistics', async (req, res) => {
             const query = { role: 'donor' };
             const total_user = await userCollection.countDocuments(query);
             /* here the count of total fund */
+            const result = await fundCollection.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalDonation: {
+                            $sum: {
+                                $toDouble: '$donation_amount'
+                            }
+                        }
+                    }
+                }
+            ]).toArray();
+            const total_donation = result.length > 0 ? result[0].totalDonation : 0;
+
             const total_blood_donation_request = await donationRequestCollection.estimatedDocumentCount();
 
             res.send({
                 total_user,
-
+                total_donation,
                 total_blood_donation_request
             })
         });
 
-        // ------------------[Data For Search Page]-------------------
-        app.get('/search-value', async(req, res) => {
-            const {blood_group, district, upazila} = req.query;
-            console.log(blood_group, district, upazila);
-
-            let query = {};
-            if(blood_group) query.blood_group = blood_group;
-            if(district) query.district = district;
-            if(upazila) query.upazila = upazila;
-            
-            const result = await donationRequestCollection.find(query).toArray();
-            res.send(result);
-        });
-
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
